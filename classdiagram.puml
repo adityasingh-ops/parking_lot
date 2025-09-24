@@ -1,0 +1,154 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+' ---- Core Parking Lot ----
+class ParkingLot {
+  -floors: List<Floor>
+  -gates: List<Gate>
+  -slotStrategy: SlotAssignmentStrategy
+  -paymentService: PaymentService
+  +enter(Vehicle, Gate): Ticket
+  +exit(Ticket, String): PaymentReceipt
+  +setSlotStrategy(SlotAssignmentStrategy)
+  +setPaymentService(PaymentService)
+}
+class Floor {
+  -floorNumber: int
+  -slotsByGate: Map<Gate, TreeSet<ParkingSlot>>
+  -gates: List<Gate>
+  +getSlotsNearGate(Gate): TreeSet<ParkingSlot>
+  +isFull(): boolean
+  +getSlots(): List<ParkingSlot>
+}
+class Gate {
+  -id: String
+  -gateType: String
+  -floor: Floor
+}
+class ParkingSlot {
+  -id: String
+  -occupied: boolean
+  -vehicle: Vehicle
+  -decorators: List<SlotDecorator>
+  +isOccupied(): boolean
+  +assignVehicle(Vehicle)
+  +freeSlot(): Vehicle
+  +addDecorator(SlotDecorator)
+  +hasPower(): boolean
+  +getSize(): String
+  +compareTo(ParkingSlot): int
+}
+abstract class SlotDecorator {
+  {abstract} +getDescription(): String
+}
+class SizeDecorator {
+  -size: String
+  +getDescription(): String
+  +getSize(): String
+}
+class PowerSlotDecorator {
+  +getDescription(): String
+  +isPowered(): boolean
+}
+class PrioritySlotDecorator {
+  +getDescription(): String
+}
+
+' ---- Vehicle Hierarchy ----
+abstract class Vehicle {
+  -licensePlate: String
+  -vehicleType: String
+  {abstract} +getSlotSize(): String
+  +getLicensePlate(): String
+  +getType(): String
+}
+class Car {
+  +getSlotSize(): String
+}
+class Bike {
+  +getSlotSize(): String
+}
+class Truck {
+  +getSlotSize(): String
+}
+class VehicleDecorator {
+  -vehicle: Vehicle
+  +getSlotSize(): String
+  +getVehicle(): Vehicle
+}
+class PowerRequiredVehicle {
+  +needsPower(): boolean
+}
+
+' ---- Booking & Payment ----
+class Ticket {
+  -ticketId: String
+  -vehicle: Vehicle
+  -assignedSlot: ParkingSlot
+  -entryTime: long
+  +getTicketId(): String
+  +getVehicle(): Vehicle
+  +getAssignedSlot(): ParkingSlot
+  +getEntryTime(): long
+}
+class PaymentReceipt {
+  -amountPaid: double
+  -paymentMethod: String
+  +getAmountPaid(): double
+  +getPaymentMethod(): String
+}
+class Receipt <<parent>> {
+  -entryTime: long
+  -exitTime: long
+}
+
+' ---- Strategy & Payment ----
+interface SlotAssignmentStrategy {
+  +assignSlot(ParkingLot, Vehicle, Gate, boolean): ParkingSlot
+}
+class NearestSlotStrategy {
+  +assignSlot(ParkingLot, Vehicle, Gate, boolean): ParkingSlot
+}
+class RandomSlotStrategy {
+  +assignSlot(ParkingLot, Vehicle, Gate, boolean): ParkingSlot
+}
+interface PaymentMethod {
+  +pay(double): boolean
+}
+class CashPayment {
+  +pay(double): boolean
+}
+class CardPayment {
+  +pay(double): boolean
+}
+class PaymentService {
+  +pay(Vehicle, double, String): boolean
+}
+
+' ---- Relationships ----
+ParkingLot "1" *-- "1..*" Floor
+ParkingLot "1" *-- "1..*" Gate
+ParkingLot --> SlotAssignmentStrategy
+ParkingLot --> PaymentService
+Floor "1" o-- "*" ParkingSlot
+Floor "1" *-- "1..*" Gate
+ParkingSlot "1" -- "*" SlotDecorator
+SlotDecorator <|-- SizeDecorator
+SlotDecorator <|-- PowerSlotDecorator
+SlotDecorator <|-- PrioritySlotDecorator
+Vehicle <|-- Car
+Vehicle <|-- Bike
+Vehicle <|-- Truck
+Vehicle <|-- VehicleDecorator
+VehicleDecorator <|-- PowerRequiredVehicle
+ParkingLot --> Ticket
+Ticket "1" -- "1" ParkingSlot
+Ticket "1" -- "1" Vehicle
+ParkingLot --> PaymentReceipt
+PaymentReceipt --|> Receipt
+SlotAssignmentStrategy <|.. NearestSlotStrategy
+SlotAssignmentStrategy <|.. RandomSlotStrategy
+PaymentMethod <|.. CashPayment
+PaymentMethod <|.. CardPayment
+PaymentService -- PaymentMethod
+@enduml
